@@ -1,6 +1,6 @@
 # Invoice MCP Server (Veem) — Workflow Tools
 
-This MCP server is designed around **Pattern A: “Full E2E workflow tools”**.
+This MCP server is designed around **Pattern: E2E workflow tools**.
 
 Instead of exposing dozens of thin REST wrappers, it exposes a small set of **workflow** tools that match how the agent works:
 

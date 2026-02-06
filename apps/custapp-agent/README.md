@@ -3,7 +3,7 @@
 This folder contains a minimal LangGraph host that calls the **Invoice MCP Server** workflow tools.
 
 > This is a scaffold to show the **graph shape** and state management.
-> Wire it into CustApp UI + auth/session as needed.
+> To be wired into CustApp UI + auth/session as needed.
 
 ## Run
 
