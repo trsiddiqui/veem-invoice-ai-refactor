@@ -2,6 +2,9 @@
 
 Flow Diagram here (Agent + LangGraph + MCP) --> https://drive.google.com/file/d/1dBR_v_DPKAxuON1gYXfGGoBnjN_nXV6q/view?usp=sharing
 
+![alt text](https://raw.githubusercontent.com/trsiddiqui/veem-invoice-ai-refactor/refs/heads/main/InvoiceAI_LangGraph_MCP.png "Flow Diagram")
+
+
 This repo contains **two deployable units**:
 
 1. **Invoice MCP Server (Python)** — exposes *workflow* MCP tools:
