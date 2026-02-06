@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
+  <title>Veem API MCP - WebSocket Client with File Upload</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css">
+
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #20AAE9 0%, #FF6B35 100%);
+      min-height: 100vh; display:flex; justify-content:center; align-items:center; padding:20px;
+    }
+
+    .container {
+      background:white; border-radius:20px; box-shadow:0 20px 60px rgba(0,0,0,.3);
+      width:100%; max-width:900px; display:flex; flex-direction:column; overflow:hidden;
+      transition: all 0.3s ease;
+    }
+
+    .login-page { height: auto; padding: 60px 40px; }
+    .login-header { text-align: center; margin-bottom: 40px; }
+    .login-header h1 {
+      font-size: 32px; background: linear-gradient(135deg, #20AAE9 0%, #FF6B35 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; margin-bottom: 10px;
+    }
+    .login-header p { color: #6b7280; font-size: 16px; }
+    .login-form { max-width: 500px; margin: 0 auto; }
+    .form-group { margin-bottom: 24px; }
+    .form-group label { display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 8px; }
+    .form-group input {
+      width: 100%; padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 12px;
+      font-size: 14px; transition: border-color 0.3s;
+    }
+    .form-group input:focus { outline: none; border-color: #20AAE9; }
+    .form-hint { font-size: 12px; color: #9ca3af; margin-top: 4px; }
+    .login-button {
+      width: 100%; padding: 14px; background: linear-gradient(135deg, #20AAE9 0%, #FF6B35 100%);
+      color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 600;
+      cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .login-button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(255, 107, 53, 0.4); }
+    .login-button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .error-message {
+      background: #fee2e2; color: #991b1b; padding: 12px 16px; border-radius: 12px;
+      margin-bottom: 20px; display: none; font-size: 14px;
+    }
+    .error-message.show { display: block; }
+
+    .chat-page { height: 800px; display: none; flex-direction: column; }
+    .chat-page.active { display: flex; }
+
+    .header {
+      background: linear-gradient(135deg, #20AAE9 0%, #FF6B35 100%);
+      color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .header h1 { font-size: 20px; font-weight: 600; }
+    .status {
+      padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;
+      background: rgba(255,255,255,0.2);
+    }
+    .status.connected { background: #10b981; }
+    .status.disconnected { background: #ef4444; }
+    .logout-button {
+      padding: 8px 16px; background: rgba(255,255,255,0.2); color: white;
+      border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; cursor: pointer;
+      font-size: 13px; transition: background 0.2s;
+    }
+    .logout-button:hover { background: rgba(255,255,255,0.3); }
+
+    .quick-actions {
+      padding: 15px 20px; background: #f9fafb; border-bottom: 1px solid #e5e7eb;
+      display: flex; gap: 8px; flex-wrap: wrap;
+    }
+    .quick-btn {
+      padding: 6px 12px; background: white; border: 1px solid #e5e7eb; border-radius: 16px;
+      font-size: 13px; cursor: pointer; transition: all 0.2s; color: #374151;
+    }
+    .quick-btn:hover { 
+      background: linear-gradient(135deg, #20AAE9 0%, #FF6B35 100%);
+      color: white; border-color: transparent;
+    }
+
+    .chat-container {
+      flex: 1; overflow-y: auto; padding: 20px; background: #f9fafb;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+
+    .message {
+      display: flex; gap: 12px; max-width: 85%; animation: slideIn 0.3s ease;
+    }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .message.user { align-self: flex-end; flex-direction: row-reverse; }
+    .message.assistant, .message.system { align-self: flex-start; }
+
+    .message-avatar {
+      width: 36px; height: 36px; border-radius: 50%; display: flex;
+      align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;
+    }
+    .message.user .message-avatar { background: linear-gradient(135deg, #20AAE9 0%, #0052CC 100%); }
+    .message.assistant .message-avatar { background: linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%); }
+    .message.system .message-avatar { background: #6b7280; }
+
+    .message-content {
+      padding: 12px 16px; border-radius: 18px; word-wrap: break-word; line-height: 1.5;
+    }
+    .message.user .message-content { background: linear-gradient(135deg, #20AAE9 0%, #0052CC 100%); color: white; }
+    .message.assistant .message-content { background: white; color: #1f2937; border: 1px solid #e5e7eb; }
+    .message.system .message-content { background: #f3f4f6; color: #6b7280; font-size: 13px; }
+
+    .message.assistant .message-content h1, .message.assistant .message-content h2,
+    .message.assistant .message-content h3 { margin: .5rem 0 .3rem; font-weight: 600; }
+    .message.assistant .message-content p { margin: .35rem 0; }
+    .message.assistant .message-content ul, .message.assistant .message-content ol { margin: .35rem 0 .35rem 1.25rem; }
+    .message.assistant .message-content li { margin: .2rem 0; }
+    .message.assistant .message-content code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: .9em; background:#f3f4f6; padding: .15em .35em; border-radius: 6px;
+    }
+    .message.assistant .message-content pre {
+      background:#0b1021; color:#e5e7eb; padding:12px; border-radius:12px; overflow:auto; margin:.5rem 0;
+    }
+    .message.assistant .message-content pre code { background:transparent; color:inherit; padding:0; font-size:.95em; }
+
+    .copy-btn {
+      position:absolute; top:8px; right:8px; padding:4px 8px; font-size:12px;
+      border:1px solid #e5e7eb; border-radius:6px; background:white; cursor:pointer;
+    }
+    .copy-btn:hover { background:#f3f4f6; }
+
+    .input-container {
+      padding:20px; background:white; border-top:1px solid #e5e7eb;
+      display:flex; flex-direction: column; gap:10px;
+    }
+    
+    .file-upload-area {
+      display: flex; gap: 10px; align-items: center;
+    }
+    
+    .file-input-wrapper {
+      position: relative; overflow: hidden; display: inline-block;
+    }
+    
+    .file-input-wrapper input[type=file] {
+      position: absolute; left: -9999px;
+    }
+    
+    
+    .file-name {
+      font-size: 13px; color: #6b7280; flex: 1;
+    }
+    
+    .clear-file-btn {
+      padding: 6px 12px; background: #fee2e2; color: #991b1b;
+      border: none; border-radius: 12px; font-size: 12px;
+      cursor: pointer; transition: background 0.2s;
+    }
+    
+    .clear-file-btn:hover { background: #fecaca; }
+    
+    .message-input-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 25px;
+      background: white;
+      transition: border-color 0.3s;
+    }
+
+    .message-input-row:focus-within {
+      border-color: #20AAE9;
+    }
+
+    #messageInput {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      outline: none;
+      font-size: 14px;
+      background: transparent;
+    }
+
+    .file-upload-btn {
+      padding: 8px 12px;
+      background: transparent;
+      color: #20AAE9;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: 600;
+    }
+
+    .file-upload-btn:hover {
+      background: #f3f4f6;
+    }
+
+    #sendButton {
+      padding: 8px 16px;
+      background: linear-gradient(135deg, #20AAE9 0%, #FF6B35 100%);
+      color: white;
+      border: none;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    #sendButton:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+    }
+
+    #sendButton:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .typing-indicator { 
+      display:none; padding:12px 16px; background:white; border:1px solid #e5e7eb; 
+      border-radius:18px; width:fit-content; margin: 0 20px 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .typing-indicator.active { display:inline-flex; align-items:center; gap:4px; }
+    .typing-indicator span { 
+      display:inline-block; width:10px; height:10px; 
+      background: linear-gradient(135deg, #20AAE9 0%, #FF6B35 100%);
+      border-radius:50%; animation:typing 1.4s infinite; 
+    }
+    .typing-indicator span:nth-child(2){ animation-delay:.2s; }
+    .typing-indicator span:nth-child(3){ animation-delay:.4s; }
+    @keyframes typing { 
+      0%,60%,100%{ transform:translateY(0); opacity:0.4; } 
+      30%{ transform:translateY(-12px); opacity:1; } 
+    }
+
+    .connection-info { font-size:12px; color:#e5e7eb; margin-top:5px; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <!-- Login Page -->
+  <div class="container login-page" id="loginPage">
+    <div class="login-header">
+      <h1>🚀 Veem Payment Agent</h1>
+      <p>Connect securely with your OAuth credentials</p>
+    </div>
+
+    <div class="error-message" id="loginError"></div>
+
+    <form class="login-form" id="loginForm">
+      <div class="form-group">
+        <label for="clientIdInput">Client ID</label>
+        <input type="text" id="clientIdInput" placeholder="Enter your client ID" value="XSSupply1-574c4a05" required>
+        <div class="form-hint">Your Veem OAuth client ID</div>
+      </div>
+
+      <div class="form-group">
+        <label for="clientSecretInput">Client Secret</label>
+        <input type="password" id="clientSecretInput" placeholder="Enter your client secret" value="7df113e7-415b-44e3-ab78-409aaec232f6" required>
+        <div class="form-hint">Your Veem OAuth client secret</div>
+      </div>
+
+      <button type="submit" class="login-button" id="loginButton">
+        Connect to Chat
+      </button>
+    </form>
+  </div>
+
+  <!-- Chat Page -->
+  <div class="container chat-page" id="chatPage">
+    <div class="header">
+      <h1>Veem Payment Agent</h1>
+      <div class="connection-info" id="connectionInfo"></div>
+      <!-- <div class="status connected" id="status">Connected</div>
+      <div class="connection-info" id="connectionInfo"></div>
+      <button class="logout-button" id="logoutButton">Disconnect</button> -->
+    </div>
+
+    <!-- <div class="quick-actions">
+      <button class="quick-btn" onclick="sendQuick('Get my account information')">Get Account</button>
+      <button class="quick-btn" onclick="sendQuick('Get my funding methods')">Get Funding</button>
+      <button class="quick-btn" onclick="sendQuick('Get my contacts')">Get Contacts</button>
+      <button class="quick-btn" onclick="sendQuick('Send $10 to the first contact for testing using my wallet')">Test Payment</button>
+      <button class="quick-btn" onclick="clearChat()">Clear Chat</button>
+    </div> -->
+
+    <div class="chat-container" id="chatContainer">
+    </div>
+
+    <div class="typing-indicator" id="typingIndicator">
+      <span></span><span></span><span></span>
+    </div>
+
+    <!-- Chat controls with file upload -->
+    <div class="input-container">
+      <div class="file-upload-area" id="fileUploadArea" style="display: none;">
+        <span class="file-name" id="fileName">No file selected</span>
+        <button class="clear-file-btn" id="clearFileBtn" onclick="clearFile()">✕</button>
+      </div>
+      
+      <div class="message-input-row">
+        <input type="text" id="messageInput" placeholder="Type your message here...">
+        <div class="file-input-wrapper">
+          <label for="fileInput" class="file-upload-btn">
+            📎
+          </label>
+          <input type="file" id="fileInput" accept=".pdf,.png,.jpg,.jpeg" onchange="handleFileSelect(event)">
+        </div>
+        <button id="sendButton">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.5/dist/purify.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/common.min.js"></script>
+
+  <script>
+    let ws = null;
+    let sessionId = null;
+    let accountId = null;
+    let selectedFile = null;
+
+    const loginPage = document.getElementById('loginPage');
+    const chatPage = document.getElementById('chatPage');
+    const loginForm = document.getElementById('loginForm');
+    const loginButton = document.getElementById('loginButton');
+    const loginError = document.getElementById('loginError');
+    const logoutButton = document.getElementById('logoutButton');
+    
+    const statusEl = document.getElementById('status');
+    const connectionInfoEl = document.getElementById('connectionInfo');
+    const chatContainer = document.getElementById('chatContainer');
+    const messageInput = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendButton');
+    const typingIndicator = document.getElementById('typingIndicator');
+    const fileInput = document.getElementById('fileInput');
+    const fileUploadArea = document.getElementById('fileUploadArea');
+    const fileName = document.getElementById('fileName');
+
+    const clientIdInput = document.getElementById('clientIdInput');
+    const clientSecretInput = document.getElementById('clientSecretInput');
+
+    marked.setOptions({ gfm: true, breaks: true, headerIds: false, mangle: false });
+
+    function looksLikeJSON(str) {
+      const s = (str || '').trim();
+      return (s.startsWith('{') && s.endsWith('}')) || (s.startsWith('[') && s.endsWith(']'));
+    }
+
+    function renderContentToHTML(content) {
+      let raw = typeof content === 'string' ? content : (() => {
+        try { return JSON.stringify(content, null, 2); } catch { return String(content); }
+      })();
+
+      if (looksLikeJSON(raw) && !raw.includes('```')) {
+        const pretty = (() => { try { return JSON.stringify(JSON.parse(raw), null, 2); } catch { return raw; }})();
+        raw = "```json\n" + pretty + "\n```";
+      }
+
+      const html = marked.parse(raw);
+      return DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
+    }
+
+    function enhanceCodeBlocks(container) {
+      container.querySelectorAll('pre > code').forEach((codeEl) => {
+        try { hljs.highlightElement(codeEl); } catch {}
+        const pre = codeEl.parentElement;
+        pre.style.position = 'relative';
+        const btn = document.createElement('button');
+        btn.className = 'copy-btn';
+        btn.textContent = 'Copy';
+        btn.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(codeEl.innerText);
+            btn.textContent = 'Copied';
+            setTimeout(() => (btn.textContent = 'Copy'), 1200);
+          } catch {}
+        });
+        pre.appendChild(btn);
+      });
+    }
+
+    function showError(message) {
+      loginError.textContent = message;
+      loginError.classList.add('show');
+      setTimeout(() => loginError.classList.remove('show'), 5000);
+    }
+
+    function generateSessionId() {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+
+    function handleFileSelect(event) {
+      const file = event.target.files[0];
+      if (file) {
+        selectedFile = file;
+        fileName.textContent = file.name;
+        fileUploadArea.style.display = 'flex';
+      }
+    }
+
+    function clearFile() {
+      selectedFile = null;
+      fileInput.value = '';
+      fileName.textContent = 'No file selected';
+      fileUploadArea.style.display = 'none';
+    }
+
+    async function uploadDocument() {
+      if (!selectedFile) return;
+
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        const base64Data = e.target.result.split(',')[1];
+        
+        addMessage('user', `📎 Uploading: ${selectedFile.name}`);
+        typingIndicator.classList.add('active');
+        
+        ws.send(JSON.stringify({
+          type: 'document_upload',
+          document_data: base64Data,
+          filename: selectedFile.name
+        }));
+        
+        clearFile();
+      };
+      reader.readAsDataURL(selectedFile);
+    }
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const clientId = clientIdInput.value.trim();
+      const clientSecret = clientSecretInput.value.trim();
+      
+      if (!clientId || !clientSecret) {
+        showError('Please enter both Client ID and Client Secret');
+        return;
+      }
+
+      loginButton.disabled = true;
+      loginButton.textContent = 'Connecting...';
+
+      try {
+        sessionId = generateSessionId();
+        const wsUrl = `ws://localhost:8000/ws/${sessionId}?client_id=${encodeURIComponent(clientId)}&client_secret=${encodeURIComponent(clientSecret)}`;
+        
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+          console.log('WebSocket connected');
+          loginPage.classList.add('hidden');
+          chatPage.classList.add('active');
+          statusEl.textContent = 'Connected';
+          statusEl.className = 'status connected';
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            handleMessage(data);
+          } catch (err) {
+            console.error('Error parsing message:', err);
+          }
+        };
+
+        ws.onerror = (error) => {
+          console.error('WebSocket error:', error);
+          showError('Connection error. Please check your credentials and try again.');
+          loginButton.disabled = false;
+          loginButton.textContent = 'Connect to Chat';
+        };
+
+        ws.onclose = () => {
+          console.log('WebSocket disconnected');
+          statusEl.textContent = 'Disconnected';
+          statusEl.className = 'status disconnected';
+        };
+
+      } catch (error) {
+        console.error('Connection error:', error);
+        showError('Failed to connect. Please try again.');
+        loginButton.disabled = false;
+        loginButton.textContent = 'Connect to Chat';
+      }
+    });
+
+    function handleMessage(data) {
+      if (data.type === 'welcome') {
+        accountId = data.account_id;
+        connectionInfoEl.textContent = '';
+        addMessage('system', data.message);
+      } else if (data.type === 'response') {
+        typingIndicator.classList.remove('active');
+        addMessage('assistant', data.content);
+      } else if (data.type === 'document_uploaded') {
+        typingIndicator.classList.remove('active');
+        addMessage('system', data.message);
+        addMessage('assistant', data.extracted_details);
+      } else if (data.type === 'status') {
+        if (data.status === 'processing') {
+          typingIndicator.classList.add('active');
+        }
+      } else if (data.type === 'error') {
+        typingIndicator.classList.remove('active');
+        addMessage('system', `Error: ${data.message || data.error || 'Unknown error'}`);
+      }
+    }
+
+    function addMessage(role, content) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${role}`;
+
+      const avatarDiv = document.createElement('div');
+      avatarDiv.className = 'message-avatar';
+      avatarDiv.textContent = role === 'user' ? '👤' : role === 'assistant' ? '🤖' : 'ℹ️';
+
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'message-content';
+      contentDiv.innerHTML = renderContentToHTML(content);
+
+      messageDiv.appendChild(avatarDiv);
+      messageDiv.appendChild(contentDiv);
+      chatContainer.appendChild(messageDiv);
+
+      enhanceCodeBlocks(contentDiv);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function sendMessage() {
+      if (selectedFile) {
+        uploadDocument();
+        return;
+      }
+
+      const message = messageInput.value.trim();
+      if (!message || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+      addMessage('user', message);
+      typingIndicator.classList.add('active');
+      
+      ws.send(JSON.stringify({
+        type: 'message',
+        content: message
+      }));
+
+      messageInput.value = '';
+    }
+
+    function sendQuick(message) {
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      addMessage('user', message);
+      ws.send(JSON.stringify({ type: 'message', content: message }));
+    }
+
+    function clearChat() {
+      chatContainer.innerHTML = '<div class="message system"><div class="message-content">Chat cleared. Continue the conversation.</div></div>';
+    }
+
+    sendButton.addEventListener('click', sendMessage);
+    messageInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    logoutButton.addEventListener('click', () => {
+      if (ws) ws.close();
+      chatPage.classList.remove('active');
+      loginPage.classList.remove('hidden');
+      chatContainer.innerHTML = '';
+      sessionId = null;
+      accountId = null;
+    });
+  </script>
+</body>
+</html>

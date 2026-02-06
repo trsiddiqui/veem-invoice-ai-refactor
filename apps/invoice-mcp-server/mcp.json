@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "veem-invoice-ai": {
+      "command": "veem-invoice-mcp",
+      "args": [],
+      "env": {
+        "VEEM_API_BASE_URL": "https://api.qa.veem.com/veem/v1.2",
+        "VEEM_ACCOUNT_ID": "YOUR_ACCOUNT_ID",
+        "VEEM_ACCESS_TOKEN": "YOUR_ACCESS_TOKEN",
+        "OPENAI_API_KEY": "YOUR_OPENAI_KEY"
+      }
+    }
+  }
+}

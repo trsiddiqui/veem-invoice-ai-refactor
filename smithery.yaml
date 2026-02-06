@@ -1,0 +1,16 @@
+runtime: "container"
+build:
+  dockerfile: "Dockerfile"
+  dockerBuildPath: "."
+startCommand:
+  type: "http"
+  # Optional: expose a JSON Schema for user-provided config in Smithery.
+  # In production you might accept per-user OAuth / API settings here.
+  configSchema:
+    type: "object"
+    properties:
+      VEEM_API_BASE_URL:
+        type: "string"
+      OPENAI_API_KEY:
+        type: "string"
+    additionalProperties: true

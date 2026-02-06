@@ -1,0 +1,9 @@
+fastmcp
+requests
+python-dotenv
+openai-agents
+fastapi
+uvicorn[standard]
+websockets
+openai
+mysql-connector-python
