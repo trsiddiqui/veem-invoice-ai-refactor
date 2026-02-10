@@ -6,23 +6,24 @@ Instead of exposing dozens of thin REST wrappers, it exposes a small set of **wo
 
 ## Tools
 
-### `invoice_process`
+### `process_invoice_file`
 - Input: invoice bytes (base64) + mime type + filename
 - Output: `processable` boolean + normalized extraction (payee, amount, currency, invoice number/date, memo, etc.)
 - Behavior: If the document is unreadable / not an invoice / missing critical fields → returns `processable=false` with a reason.
 
-### `payment_prepare`
+### `prepare_payment`
 - Input: either a natural language command or the output of `invoice_process`
 - Output: a **PaymentDraft** containing:
   - resolved Veem entities (payee/contact)
   - inferred currency & funding method (from history when possible)
   - a list of **assumptions** and `needs_confirmation=true|false`
+  - If low confidence, refer user to the UI (appropriate page) to perform the action
 
-### `payment_submit`
+### `submit_payment`
 - Input: PaymentDraft (+ any user modifications)
 - Output: Veem payment creation/submission result + idempotency key
 
-### `payment_schedule`
+### `schedule_payment`
 - Input: PaymentDraft + scheduled datetime
 - Output: scheduled job id (POC uses SQLite). In production, swap the adapter to the PaymentDomain schedule API.
 
